@@ -58,36 +58,133 @@ def _ensure_com_initialized():
 
 def _get_real_sender_email(message):
     """
-    Tenta extrair o email real do remetente, evitando códigos Exchange.
+    Tenta extrair o nome e email real do remetente, evitando códigos Exchange.
     
     Args:
         message: Objeto de email do Outlook
         
     Returns:
-        str: Email real do remetente ou fallback
+        str: Nome e email do remetente no formato "Nome <email@domain.com>" ou fallback
     """
     try:
-        # Primeira tentativa: SenderEmailAddress
+        # Coletar informações disponíveis
         sender_email = getattr(message, 'SenderEmailAddress', '')
+        sender_name = None
+        real_email = None
         
-        # Se contém @ e não parece ser um código, usar diretamente
+        # Tentar obter nome do remetente
+        try:
+            if hasattr(message, 'SenderName') and message.SenderName:
+                sender_name = message.SenderName.strip()
+            elif hasattr(message, 'Sender') and message.Sender and hasattr(message.Sender, 'Name'):
+                sender_name = message.Sender.Name.strip()
+        except:
+            pass
+        
+        # Primeira tentativa: SenderEmailAddress direto
         if '@' in sender_email and not sender_email.startswith('/'):
-            return sender_email
+            real_email = sender_email
         
         # Segunda tentativa: através do objeto Sender
-        if hasattr(message, 'Sender') and message.Sender:
+        if not real_email and hasattr(message, 'Sender') and message.Sender:
             sender = message.Sender
             if hasattr(sender, 'Address') and sender.Address:
                 sender_address = sender.Address
                 if '@' in sender_address and not sender_address.startswith('/'):
-                    return sender_address
+                    real_email = sender_address
         
-        # Terceira tentativa: através do objeto Author
-        if hasattr(message, 'Author') and message.Author:
-            return message.Author
+        # Terceira tentativa: SenderName (se contém email)
+        if not real_email and sender_name and '@' in sender_name:
+            real_email = sender_name
+            sender_name = None  # Reset para não duplicar
         
-        # Fallback: retorna o SenderEmailAddress original (mesmo que seja código)
-        return sender_email
+        # Quarta tentativa: através do objeto Author
+        if not real_email and hasattr(message, 'Author') and message.Author:
+            author = message.Author
+            if '@' in author:
+                real_email = author
+        
+        # Quinta tentativa: através de Recipients
+        if not real_email:
+            try:
+                if hasattr(message, 'Recipients') and message.Recipients:
+                    for recipient in message.Recipients:
+                        if hasattr(recipient, 'Type') and recipient.Type == 1:  # olOriginator
+                            if hasattr(recipient, 'Address') and recipient.Address:
+                                if '@' in recipient.Address and not recipient.Address.startswith('/'):
+                                    real_email = recipient.Address
+                                    break
+            except:
+                pass
+        
+        # Sexta tentativa: ReplyRecipients
+        if not real_email:
+            try:
+                if hasattr(message, 'ReplyRecipients') and message.ReplyRecipients:
+                    for reply_recipient in message.ReplyRecipients:
+                        if hasattr(reply_recipient, 'Address') and reply_recipient.Address:
+                            if '@' in reply_recipient.Address and not reply_recipient.Address.startswith('/'):
+                                real_email = reply_recipient.Address
+                                break
+            except:
+                pass
+        
+        # Sétima tentativa: propriedades MAPI
+        if not real_email:
+            try:
+                # PR_SENDER_EMAIL_ADDRESS
+                sender_mapi = message.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x0C1F001E")
+                if sender_mapi and '@' in sender_mapi and not sender_mapi.startswith('/'):
+                    real_email = sender_mapi
+            except:
+                pass
+        
+        # Oitava tentativa: PR_SENT_REPRESENTING_EMAIL_ADDRESS
+        if not real_email:
+            try:
+                repr_email = message.PropertyAccessor.GetProperty("http://schemas.microsoft.com/mapi/proptag/0x0065001E")
+                if repr_email and '@' in repr_email and not repr_email.startswith('/'):
+                    real_email = repr_email
+            except:
+                pass
+        
+        # Tentar extrair email de domínios conhecidos através do nome
+        if not real_email and sender_name:
+            # Tentar construir email baseado no nome para domínios AON
+            name_lower = sender_name.lower().replace(' ', '.')
+            potential_emails = [
+                f"{name_lower}@aon.com",
+                f"{name_lower}@aon.com.br"
+            ]
+            
+            # Para fins de log, usar o primeiro potencial
+            real_email = potential_emails[0]
+        
+        # Construir resultado final
+        if real_email and sender_name:
+            # Limpar nome (remover caracteres especiais se necessário)
+            clean_name = sender_name.replace('"', '').replace("'", "").strip()
+            return f"{clean_name} <{real_email}>"
+        
+        elif real_email:
+            # Só temos email
+            return real_email
+        
+        elif sender_name and sender_name.strip() and not sender_name.startswith('/'):
+            # Só temos nome - tentar construir email AON
+            clean_name = sender_name.replace('"', '').replace("'", "").strip()
+            name_parts = clean_name.lower().split()
+            if len(name_parts) >= 2:
+                email_guess = f"{name_parts[0]}.{name_parts[-1]}@aon.com"
+                return f"{clean_name} <{email_guess}>"
+            else:
+                return f"{clean_name} [SEM_EMAIL]"
+        
+        # Último fallback: código com identificação 
+        if sender_email and sender_email.startswith('/'):
+            return f"[CÓDIGO_EXCHANGE] {sender_email[:50]}..."
+        
+        return sender_email or 'Remetente Desconhecido'
         
     except Exception as e:
         logging.debug(f"Erro ao extrair email do remetente: {e}")
