@@ -126,9 +126,9 @@ class SinistroProcessor:
                 subject=subject,
                 numero_sinistro=numero_sinistro,
                 content_email=body,
-                cc_addresses=[],  # Lista vazia para CC
-                to_address=email_info[6] if len(email_info) > 6 else "Desconhecido",
-                from_address=email_info[6] if len(email_info) > 6 else "Desconhecido"
+                cc_addresses=email_info[5] if len(email_info) > 5 else "",  # CC addresses (índice 5)
+                to_address=email_info[4] if len(email_info) > 4 else "Desconhecido",  # To addresses (índice 4)
+                from_address=email_info[6] if len(email_info) > 6 else "Desconhecido"  # Sender (índice 6)
             )
             
             if sucesso:

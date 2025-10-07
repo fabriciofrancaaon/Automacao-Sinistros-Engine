@@ -56,6 +56,44 @@ def _ensure_com_initialized():
         pass
 
 
+def _get_real_sender_email(message):
+    """
+    Tenta extrair o email real do remetente, evitando códigos Exchange.
+    
+    Args:
+        message: Objeto de email do Outlook
+        
+    Returns:
+        str: Email real do remetente ou fallback
+    """
+    try:
+        # Primeira tentativa: SenderEmailAddress
+        sender_email = getattr(message, 'SenderEmailAddress', '')
+        
+        # Se contém @ e não parece ser um código, usar diretamente
+        if '@' in sender_email and not sender_email.startswith('/'):
+            return sender_email
+        
+        # Segunda tentativa: através do objeto Sender
+        if hasattr(message, 'Sender') and message.Sender:
+            sender = message.Sender
+            if hasattr(sender, 'Address') and sender.Address:
+                sender_address = sender.Address
+                if '@' in sender_address and not sender_address.startswith('/'):
+                    return sender_address
+        
+        # Terceira tentativa: através do objeto Author
+        if hasattr(message, 'Author') and message.Author:
+            return message.Author
+        
+        # Fallback: retorna o SenderEmailAddress original (mesmo que seja código)
+        return sender_email
+        
+    except Exception as e:
+        logging.debug(f"Erro ao extrair email do remetente: {e}")
+        return getattr(message, 'SenderEmailAddress', 'Remetente Desconhecido')
+
+
 def send_generic_email(to: str, subject: str, body: str, is_html: bool = False) -> bool:
     """
     Envia um email genérico usando o Outlook.
@@ -675,7 +713,7 @@ def get_inbox_emails_info(days_back: int = DAYS_LOOKBACK) -> List[Tuple]:
                 # Extrai informações básicas
                 subject = str(message.Subject)
                 body = str(message.Body)
-                sender = str(message.SenderEmailAddress)
+                sender = _get_real_sender_email(message)  # Usa função melhorada para extrair email
                 to_addresses = str(message.To) if hasattr(message, 'To') else ""
                 cc_addresses = str(message.CC) if hasattr(message, 'CC') else ""
                 
@@ -771,7 +809,7 @@ def get_sent_emails_info(days_back: int = DAYS_LOOKBACK) -> List[Tuple]:
                 message.Body,
                 getattr(message, 'To', ''),
                 getattr(message, 'CC', ''),
-                getattr(message, 'SenderEmailAddress', ''),
+                _get_real_sender_email(message),  # Usa função melhorada para extrair email
                 sent_time  # Usa SentOn ao invés de ReceivedTime
             )
             email_info_list.append(email_info)

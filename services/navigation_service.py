@@ -749,7 +749,7 @@ class NavigationManager:
             print(f"  [LOG] Iniciando adição de atualização para assunto: {subject}")
             self.logger.info(f"Iniciando adição de atualização para assunto: {subject}")
             
-            # 1. Primeiro preenche o campo "Tipo de Informe" com código padrão 00029
+            # 1. Primeiro preenche o campo "Tipo de Informe" com código padrão 00076
             print("  [TAG] Preenchendo tipo de informe...")
             self._fill_tipo_informe(subject)  # Sempre tenta preencher, sem verificar retorno
             print("  [SUCESSO] Tipo de informe processado")
@@ -841,17 +841,17 @@ class NavigationManager:
 
     def _fill_tipo_informe(self, subject):
         """
-        Preenche o campo "Tipo de Informe" com o código padrão 00029.
+        Preenche o campo "Tipo de Informe" com o código padrão 00076.
         
         Args:
-            subject (str): Assunto do email (não usado, sempre usa 00029)
+            subject (str): Assunto do email (não usado, sempre usa 00076)
             
         Returns:
             bool: True se preenchimento foi bem-sucedido
         """
         try:
-            # Sempre usa o código padrão 00029
-            codigo = "00029"
+            # Sempre usa o código padrão 00076
+            codigo = "00076"
             
             # ID do campo baseado no HTML fornecido
             field_id = "c_c_c_SeguimientoClienteEditor_lkpTipoInforme_FieldLookUp"
