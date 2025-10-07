@@ -787,10 +787,9 @@ def get_inbox_emails_info(days_back: int = DAYS_LOOKBACK) -> List[Tuple]:
         messages = inbox.Items
         messages.Sort(SORT_BY_RECEIVED_TIME, True)  # Ordena por data de recebimento
         
-        # Define período de busca
-        cutoff_date = datetime.now() - timedelta(days=days_back)
+        # Define período de busca com timezone consistente
         local_timezone = datetime.now().astimezone().tzinfo
-        cutoff_date = cutoff_date.replace(tzinfo=local_timezone)
+        cutoff_date = datetime.now().replace(tzinfo=local_timezone) - timedelta(days=days_back)
         
         # Processa emails
         email_info_list = []
@@ -799,12 +798,29 @@ def get_inbox_emails_info(days_back: int = DAYS_LOOKBACK) -> List[Tuple]:
             received_time = getattr(message, 'ReceivedTime', None)
             if received_time is None:
                 continue
-                
-            if received_time.tzinfo is None:
-                received_time = received_time.replace(tzinfo=local_timezone)
             
-            if received_time < cutoff_date:
-                break  # Para de processar mensagens antigas
+            # Normaliza timezone para comparação
+            try:
+                # Se received_time não tem timezone, assume local
+                if received_time.tzinfo is None:
+                    received_time = received_time.replace(tzinfo=local_timezone)
+                # Se tem timezone diferente, converte para local
+                elif received_time.tzinfo != local_timezone:
+                    received_time = received_time.astimezone(local_timezone)
+                
+                if received_time < cutoff_date:
+                    break  # Para de processar mensagens antigas
+                    
+            except Exception as tz_error:
+                # Em caso de erro de timezone, usa comparação naive
+                try:
+                    cutoff_naive = cutoff_date.replace(tzinfo=None)
+                    received_naive = received_time.replace(tzinfo=None) if received_time.tzinfo else received_time
+                    if received_naive < cutoff_naive:
+                        break
+                except Exception:
+                    # Se ainda falhar, pula esta verificação de data
+                    pass
             
             try:
                 # Extrai informações básicas
@@ -869,10 +885,9 @@ def get_sent_emails_info(days_back: int = DAYS_LOOKBACK) -> List[Tuple]:
         messages = sent_items.Items
         messages.Sort(SORT_BY_SENT_TIME, True)  # Ordena por data de envio (mais recentes primeiro)
         
-        # Define período de busca
-        cutoff_date = datetime.now() - timedelta(days=days_back)
+        # Define período de busca com timezone consistente
         local_timezone = datetime.now().astimezone().tzinfo
-        cutoff_date = cutoff_date.replace(tzinfo=local_timezone)
+        cutoff_date = datetime.now().replace(tzinfo=local_timezone) - timedelta(days=days_back)
         
         # Processa emails
         email_info_list = []
@@ -881,12 +896,29 @@ def get_sent_emails_info(days_back: int = DAYS_LOOKBACK) -> List[Tuple]:
             sent_time = getattr(message, 'SentOn', None)
             if sent_time is None:
                 continue
-                
-            if sent_time.tzinfo is None:
-                sent_time = sent_time.replace(tzinfo=local_timezone)
             
-            if sent_time < cutoff_date:
-                break
+            # Normaliza timezone para comparação
+            try:
+                # Se sent_time não tem timezone, assume local
+                if sent_time.tzinfo is None:
+                    sent_time = sent_time.replace(tzinfo=local_timezone)
+                # Se tem timezone diferente, converte para local
+                elif sent_time.tzinfo != local_timezone:
+                    sent_time = sent_time.astimezone(local_timezone)
+                
+                if sent_time < cutoff_date:
+                    break
+                    
+            except Exception as tz_error:
+                # Em caso de erro de timezone, usa comparação naive
+                try:
+                    cutoff_naive = cutoff_date.replace(tzinfo=None)
+                    sent_naive = sent_time.replace(tzinfo=None) if sent_time.tzinfo else sent_time
+                    if sent_naive < cutoff_naive:
+                        break
+                except Exception:
+                    # Se ainda falhar, pula esta verificação de data
+                    pass
             
             # Extrai informações do email
             numero_sinistro = extract_numero_sinistro(message.Subject)
@@ -1189,21 +1221,54 @@ def clean_old_processed_emails(days_to_keep: int = 7):
 
 
 def _filter_last_24h_exact(emails: List[Tuple]) -> List[Tuple]:
-    """Filtra emails das últimas 24 horas exatas (baseado em tempo de envio para emails enviados)"""
-    cutoff = datetime.now().replace(tzinfo=datetime.now().astimezone().tzinfo) - timedelta(hours=24)
+    """
+    Filtra emails das últimas 24 horas exatas.
+    
+    Compatível com ambos os formatos:
+    - Emails enviados: email[7] é datetime
+    - Emails recebidos: email[7] é string no formato '%d/%m/%Y %H:%M:%S'
+    """
+    local_timezone = datetime.now().astimezone().tzinfo
+    cutoff = datetime.now().replace(tzinfo=local_timezone) - timedelta(hours=24)
     
     emails_24h = []
     for email in emails:
         try:
-            # Para emails enviados, usa o tempo de envio (índice 7)
-            sent_time = email[7] if len(email) > 7 else None
-            if sent_time:
-                if sent_time.tzinfo is None:
-                    sent_time = sent_time.replace(tzinfo=datetime.now().astimezone().tzinfo)
-                if sent_time >= cutoff:
-                    emails_24h.append(email)
-        except:
-            pass
+            # Extrai tempo do email (índice 7)
+            time_data = email[7] if len(email) > 7 else None
+            if not time_data:
+                continue
+                
+            # Converte para datetime se for string
+            if isinstance(time_data, str):
+                try:
+                    # Formato usado na caixa de entrada: '%d/%m/%Y %H:%M:%S'
+                    email_time = datetime.strptime(time_data, '%d/%m/%Y %H:%M:%S')
+                    email_time = email_time.replace(tzinfo=local_timezone)
+                except ValueError:
+                    # Tenta outros formatos comuns
+                    try:
+                        email_time = datetime.strptime(time_data, '%Y-%m-%d %H:%M:%S')
+                        email_time = email_time.replace(tzinfo=local_timezone)
+                    except ValueError:
+                        continue
+            elif hasattr(time_data, 'year'):  # É um objeto datetime
+                email_time = time_data
+                # Normaliza timezone
+                if email_time.tzinfo is None:
+                    email_time = email_time.replace(tzinfo=local_timezone)
+                elif email_time.tzinfo != local_timezone:
+                    email_time = email_time.astimezone(local_timezone)
+            else:
+                continue  # Formato não reconhecido
+                
+            # Verifica se está nas últimas 24h
+            if email_time >= cutoff:
+                emails_24h.append(email)
+                
+        except Exception as e:
+            # Em caso de erro, assume que é um email válido para não perder dados
+            continue
     
     return emails_24h
 
