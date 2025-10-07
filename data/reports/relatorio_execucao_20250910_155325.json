@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-09-10T15:53:25.625541",
+  "statistics": {},
+  "processed": [],
+  "failed": [
+    "RES: Teste 2 bla chassi LGXC74C46T0047443 Operação SC. MSC Silvia - Sompo ST2508061292  - AON 636884 - 636884",
+    "RES: Avaria chassi LGXC74C46T0047443 Operação SC. MSC Silvia - Sompo ST2508061292  - AON 636884 - 636884"
+  ],
+  "summary": {
+    "total_emails": 2,
+    "success_count": 0,
+    "failure_count": 2,
+    "success_rate": 0.0
+  }
+}

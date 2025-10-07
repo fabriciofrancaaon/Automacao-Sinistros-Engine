@@ -1,0 +1,11 @@
+{
+  "pasta_monitorada": "\\\\aonnet.aon.net\\SAFS\\Brazil\\Sao_Paulo\\Chatbot",
+  "intervalo_verificacao": 30,
+  "recursive": true,
+  "log_file": "eventos_monitoramento.json",
+  "automacao_selenium": true,
+  "selenium_headless": true,
+  "navegacao_completa": true,
+  "timeout_navegacao": 60,
+  "usar_main_orquestrador": true
+}

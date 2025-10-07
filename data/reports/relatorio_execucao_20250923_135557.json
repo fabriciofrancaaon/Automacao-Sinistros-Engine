@@ -1,0 +1,14 @@
+{
+  "timestamp": "2025-09-23T13:55:57.580538",
+  "statistics": {},
+  "processed": [
+    "RES: Avaria chassi LGXC74C46T0047443 Operação SC. MSC Silvia - Sompo ST2508061292  - AON 633851 - 633851"
+  ],
+  "failed": [],
+  "summary": {
+    "total_emails": 1,
+    "success_count": 1,
+    "failure_count": 0,
+    "success_rate": 100.0
+  }
+}

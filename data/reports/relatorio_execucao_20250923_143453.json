@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-23T14:34:53.897339",
+  "statistics": {},
+  "processed": [],
+  "failed": [],
+  "summary": {
+    "total_emails": 0,
+    "success_count": 0,
+    "failure_count": 0,
+    "success_rate": 0
+  }
+}

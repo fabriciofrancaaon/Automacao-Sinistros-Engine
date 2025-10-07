@@ -1,0 +1,38 @@
+{
+  "project": {
+    "name": "Automacao Sinistros",
+    "version": "1.0.0",
+    "description": "Sistema de automacao para processamento de sinistros AON"
+  },
+  "monitoring": {
+    "folder_path": "\\\\aonnet.aon.net\\SAFS\\Brazil\\Sao_Paulo\\Chatbot",
+    "recursive": true,
+    "file_patterns": ["*.txt", "*.pdf", "*.doc", "*.docx"],
+    "excluded_patterns": ["~*", "*.tmp"],
+    "check_interval": 1
+  },
+  "automation": {
+    "max_retries": 3,
+    "timeout_seconds": 30,
+    "screenshot_on_error": true,
+    "headless": false
+  },
+  "email": {
+    "days_to_process": 7,
+    "batch_size": 10,
+    "smtp_timeout": 60
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file_rotation": true,
+    "max_files": 10,
+    "max_size_mb": 50
+  },
+  "paths": {
+    "logs": "data/logs",
+    "screenshots": "data/screenshots", 
+    "processed": "data/processed",
+    "config": "config"
+  }
+}

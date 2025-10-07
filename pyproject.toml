@@ -1,0 +1,154 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "automacao-sinistros"
+version = "2.0.0"
+description = "Sistema de automação para processamento de sinistros AON"
+readme = "readme.MD"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Automação AON", email = "automacao@aon.com"}
+]
+maintainers = [
+    {name = "Equipe de Desenvolvimento", email = "dev@aon.com"}
+]
+keywords = ["automation", "selenium", "claims", "aon", "insurance"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Insurance",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.12"
+
+dependencies = [
+    "selenium>=4.27.0",
+    "webdriver-manager>=4.0.0",
+    "python-dotenv>=1.0.0",
+    "pywin32>=308",
+    "requests>=2.32.0",
+    "pandas>=2.2.0",
+    "openpyxl>=3.1.0",
+    "tabulate>=0.9.0",
+    "watchdog>=4.0.0",
+    "python-dateutil>=2.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.9.0",
+    "flake8>=6.1.0",
+    "mypy>=1.6.0",
+]
+build = [
+    "pyinstaller>=6.11.0",
+]
+
+[project.urls]
+Repository = "https://github.com/aon/automacao-sinistros"
+Documentation = "https://github.com/aon/automacao-sinistros/wiki"
+"Bug Tracker" = "https://github.com/aon/automacao-sinistros/issues"
+
+[project.scripts]
+automacao-sinistros = "automacao_sinistros.core.main:main"
+monitor-sinistros = "automacao_sinistros.monitors.file_monitor:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["automacao_sinistros*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+automacao_sinistros = [
+    "config/*.json",
+    "assets/*",
+    "data/*",
+]
+
+# Configurações de ferramentas de desenvolvimento
+[tool.black]
+line-length = 88
+target-version = ['py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | env
+)/
+'''
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "env",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+source = ["automacao_sinistros"]
+omit = [
+    "*/tests/*",
+    "*/env/*",
+    "*/venv/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\bProtocol\):",
+    "@(abc\.)?abstractmethod",
+]
